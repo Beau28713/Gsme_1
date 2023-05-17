@@ -1,12 +1,16 @@
 import arcade
+import math
 
 SPRITE_SCALING = 0.5
+SPRITE_SCALING_LASER = 0.8
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 SCREEN_TITLE = "GAME"
 
 MOVEMENT_SPEED = 5
+
+BULLET_SPEED = 5
 
 class Player(arcade.Sprite):
     def update(self):
@@ -32,6 +36,8 @@ class MyGame(arcade.Window):
         self.player_list = None
         self.player_sprite = None
 
+        self.bullet_list = None
+
         self.left_pressed = False
         self.right_pressed = False
         self.up_pressed = False
@@ -44,6 +50,8 @@ class MyGame(arcade.Window):
         self.player_list = arcade.SpriteList()
         self.player_sprite = Player(":resources:images/animated_characters/female_person/femalePerson_idle.png", SPRITE_SCALING)
 
+        self.bullet_list = arcade.SpriteList()
+
         self.player_sprite.center_x = 50
         self.player_sprite.center_y = 50
         self.player_list.append(self.player_sprite)
@@ -53,6 +61,7 @@ class MyGame(arcade.Window):
         self.clear()
 
         # draw all the sprites
+        self.bullet_list.draw()
         self.player_list.draw()
 
     def update_player_speed(self):
@@ -73,6 +82,40 @@ class MyGame(arcade.Window):
     def on_update(self, delta_time):
         # update the sprite location
         self.player_list.update()
+        self.bullet_list.update()
+
+        for bullet in self.bullet_list:
+            if bullet.bottom > self.width or bullet.top < 0 or bullet.right < 0 or bullet.left > self.width:
+                bullet.remove_from_sprite_lists()
+
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        bullet = arcade.Sprite(":resources:images/space_shooter/laserBlue01.png", SPRITE_SCALING_LASER)
+
+        start_x = self.player_sprite.center_x
+        start_y = self.player_sprite.center_y
+
+        bullet.center_x = start_x
+        bullet.center_y = start_y
+
+        # where is the bullet going (Mouse pointer location on screen. Argument passed in to on_mouse_press when mouse is clicked)
+        dest_x = x
+        dest_y = y
+
+        # Calculate the angle the bullet will travel to destination
+        x_diff = dest_x - start_x
+        y_diff = dest_y - start_y
+
+        angle = math.atan2(y_diff, x_diff)
+
+        # angle the bullet to look more normal
+        bullet.angle = math.degrees(angle)
+        print(f"Bullet angle: {bullet.angle:.2f}")
+
+        # set how fast the bullet will travel
+        bullet.change_x = math.cos(angle) * BULLET_SPEED
+        bullet.change_y = math.sin(angle) * BULLET_SPEED
+
+        self.bullet_list.append(bullet)
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """

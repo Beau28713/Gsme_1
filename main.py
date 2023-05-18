@@ -9,14 +9,39 @@ SCREEN_HEIGHT = 600
 SCREEN_TITLE = "GAME"
 
 MOVEMENT_SPEED = 5
-
 BULLET_SPEED = 5
 
+TEXTURE_LEFT = 0
+TEXTURE_RIGHT = 1
+
 class Player(arcade.Sprite):
+    def __init__(self):
+        super().__init__()
+
+        self.textures = []
+
+        texture = arcade.load_texture(":resources:images/animated_characters/female_adventurer/femaleAdventurer_walk5.png")
+        self.textures.append(texture)
+
+        texture = arcade.load_texture(":resources:images/animated_characters/female_adventurer/femaleAdventurer_walk5.png", flipped_horizontally=True)
+        self.textures.append(texture)
+
+        # Set the scaling of the Spite (self.scale is part of arcade.Sprite)
+        self.scale = SPRITE_SCALING
+
+        # Set the sprite as a texture (self.texture is part of arcade.Sprite)
+        self.texture = texture
+
     def update(self):
         # move the player
         self.center_x += self.change_x
         self.center_y += self.change_y
+
+        # Decide which texture to use
+        if self.change_x < 0:
+            self.texture = self.textures[TEXTURE_LEFT]
+        elif self.change_x > 0:
+            self.texture = self.textures[TEXTURE_RIGHT]
 
         # check to see if sprite is out of bounds
         if self.left < 0:
@@ -48,7 +73,7 @@ class MyGame(arcade.Window):
 
     def setup(self):
         self.player_list = arcade.SpriteList()
-        self.player_sprite = Player(":resources:images/animated_characters/female_person/femalePerson_idle.png", SPRITE_SCALING)
+        self.player_sprite = Player()
 
         self.bullet_list = arcade.SpriteList()
 

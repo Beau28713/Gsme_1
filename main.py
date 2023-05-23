@@ -1,8 +1,10 @@
 import arcade
 import math
+import random
 
 SPRITE_SCALING = 0.5
 SPRITE_SCALING_LASER = 0.8
+ENEMY_SPRITE_SCALING = 0.3
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -10,9 +12,39 @@ SCREEN_TITLE = "GAME"
 
 MOVEMENT_SPEED = 5
 BULLET_SPEED = 5
+ENEMY_SPRITE_SPEED = 0.5
 
 TEXTURE_LEFT = 0
 TEXTURE_RIGHT = 1
+
+COIN_COUNT = 10
+
+class Enemy(arcade.Sprite):
+
+    def follow_player(self, player_sprite):
+
+        # Move the enemy on the screen
+        self.center_x += self.change_x
+        self.center_y += self.change_y
+
+        # How quickly the enemy will start to chase the player
+        # and how quickly it will change direction
+        if random.randrange(100) == 0:
+            start_x = self.center_x
+            start_y = self.center_y
+
+            # Find the player on the screen
+            dest_x = player_sprite.center_x
+            dest_y = player_sprite.center_y
+
+            # Set the destination of the enemy sprite
+            x_diff = dest_x - start_x
+            y_diff = dest_y - start_y
+            angle = math.atan2(y_diff, x_diff)
+
+            # Set the Speed of the enemy Sprite
+            self.change_x = math.cos(angle) * ENEMY_SPRITE_SPEED
+            self.change_y = math.sin(angle) * ENEMY_SPRITE_SPEED
 
 class Player(arcade.Sprite):
     def __init__(self):
@@ -62,6 +94,7 @@ class MyGame(arcade.Window):
         self.player_sprite = None
 
         self.bullet_list = None
+        self.enemy_list = None
 
         self.left_pressed = False
         self.right_pressed = False
@@ -77,9 +110,20 @@ class MyGame(arcade.Window):
 
         self.bullet_list = arcade.SpriteList()
 
+        self.enemy_list = arcade.SpriteList()
+
+        # Set the starting position of the player Sprite
         self.player_sprite.center_x = 50
         self.player_sprite.center_y = 50
         self.player_list.append(self.player_sprite)
+
+        # Create the enemies and append them to the list
+        for i in range(COIN_COUNT):
+            enemy = Enemy(":resources:images/items/coinGold.png", ENEMY_SPRITE_SCALING)
+            enemy.center_x = random.randrange(SCREEN_WIDTH)
+            enemy.center_y = random.randrange(SCREEN_HEIGHT)
+
+            self.enemy_list.append(enemy)
 
     def on_draw(self):
         # Clear the c=screen first
@@ -88,6 +132,7 @@ class MyGame(arcade.Window):
         # draw all the sprites
         self.bullet_list.draw()
         self.player_list.draw()
+        self.enemy_list.draw()
 
     def update_player_speed(self):
 
@@ -112,6 +157,9 @@ class MyGame(arcade.Window):
         for bullet in self.bullet_list:
             if bullet.bottom > self.width or bullet.top < 0 or bullet.right < 0 or bullet.left > self.width:
                 bullet.remove_from_sprite_lists()
+
+        for enemy in self.enemy_list:
+            enemy.follow_player(self.player_sprite)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         bullet = arcade.Sprite(":resources:images/space_shooter/laserBlue01.png", SPRITE_SCALING_LASER)

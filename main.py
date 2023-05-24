@@ -112,6 +112,8 @@ class MyGame(arcade.Window):
 
         self.enemy_list = arcade.SpriteList()
 
+        self.score = 0
+
         # Set the starting position of the player Sprite
         self.player_sprite.center_x = 50
         self.player_sprite.center_y = 50
@@ -124,15 +126,6 @@ class MyGame(arcade.Window):
             enemy.center_y = random.randrange(SCREEN_HEIGHT)
 
             self.enemy_list.append(enemy)
-
-    def on_draw(self):
-        # Clear the c=screen first
-        self.clear()
-
-        # draw all the sprites
-        self.bullet_list.draw()
-        self.player_list.draw()
-        self.enemy_list.draw()
 
     def update_player_speed(self):
 
@@ -149,24 +142,53 @@ class MyGame(arcade.Window):
         elif self.right_pressed and not self.left_pressed:
             self.player_sprite.change_x = MOVEMENT_SPEED
 
+    def on_draw(self):
+        # Clear the screen first
+        self.clear()
+
+        # draw all the sprites
+        self.bullet_list.draw()
+        self.player_list.draw()
+        self.enemy_list.draw()
+
+        screen_score = f"Score: {self.score}"
+        arcade.draw_text(screen_score, 10, 20, arcade.color.YELLOW, 14)
+
     def on_update(self, delta_time):
         # update the sprite location
         self.player_list.update()
         self.bullet_list.update()
 
         for bullet in self.bullet_list:
+            
+            # Check to see if any bullet hits the enemy 
+            hit_list = arcade.check_for_collision_with_list(bullet, self.enemy_list)
+
+            # remove bullet from sprite list if it hits enemy
+            if len(hit_list) > 0:
+                bullet.remove_from_sprite_lists()
+
+            # if an enmy is in the hit list remove it from the sprite list
+            # add one point to score
+            for enemy in hit_list:
+                enemy.remove_from_sprite_lists()
+                self.score += 1
+
+            # if bullet goes off screen remove it from the sprite list
             if bullet.bottom > self.width or bullet.top < 0 or bullet.right < 0 or bullet.left > self.width:
                 bullet.remove_from_sprite_lists()
 
+        # for every enemy in enemy list callfollow player 
+        # and send it a player sprite object
         for enemy in self.enemy_list:
             enemy.follow_player(self.player_sprite)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         bullet = arcade.Sprite(":resources:images/space_shooter/laserBlue01.png", SPRITE_SCALING_LASER)
-
+        
+        # bullet starts at player x and y center
         start_x = self.player_sprite.center_x
         start_y = self.player_sprite.center_y
-
         bullet.center_x = start_x
         bullet.center_y = start_y
 
@@ -177,7 +199,6 @@ class MyGame(arcade.Window):
         # Calculate the angle the bullet will travel to destination
         x_diff = dest_x - start_x
         y_diff = dest_y - start_y
-
         angle = math.atan2(y_diff, x_diff)
 
         # angle the bullet to look more normal

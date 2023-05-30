@@ -18,6 +18,8 @@ TEXTURE_LEFT = 0
 TEXTURE_RIGHT = 1
 
 COIN_COUNT = 10
+PLAYER_HEALTH = 10
+INDICATOR_BAR_OFFSET = 32
 
 class Enemy(arcade.Sprite):
 
@@ -47,7 +49,7 @@ class Enemy(arcade.Sprite):
             self.change_y = math.sin(angle) * ENEMY_SPRITE_SPEED
 
 class Player(arcade.Sprite):
-    def __init__(self):
+    def __init__(self, ind_bar_list):
         super().__init__()
 
         self.textures = []
@@ -63,6 +65,9 @@ class Player(arcade.Sprite):
 
         # Set the sprite as a texture (self.texture is part of arcade.Sprite)
         self.texture = texture
+
+        self.health_bar  = IndicatorBar(self, ind_bar_list, (self.center_x, self.center_y))
+        self.health = PLAYER_HEALTH
 
     def update(self):
         # move the player on the screen
@@ -84,7 +89,93 @@ class Player(arcade.Sprite):
         if self.bottom < 0:
             self.bottom = 0
         elif self.top > SCREEN_HEIGHT - 1:
-            self.top = SCREEN_HEIGHT - 1      
+            self.top = SCREEN_HEIGHT - 1
+
+class IndicatorBar:
+    def __init__(self, owner, sprite_list, position = (0,0), full_color = arcade.color.GREEN, background_color = arcade.color.BLACK, width = 100, height = 4, border_size = 4):
+
+        self.owner = owner
+        self.sprite_list = sprite_list
+
+        self._box_width: int = width
+        self._box_height: int = height
+        self._half_box_width: int = self._box_width // 2
+        self._center_x: float = 0.0
+        self._center_y: float = 0.0
+        self._fullness: float = 0.0
+
+        # Create the boxes needed to represent the indicator bar
+        self._background_box = arcade.SpriteSolidColor(
+            self._box_width + border_size,
+            self._box_height + border_size,
+            background_color,
+        )
+        self._full_box = arcade.SpriteSolidColor(
+            self._box_width,
+            self._box_height,
+            full_color,
+        )
+        self.sprite_list.append(self._background_box)
+        self.sprite_list.append(self._full_box)
+
+        # Set the fullness and position of the bar
+        self.fullness = 1.0
+        self.position = position
+
+    def __repr__(self) -> str:
+        return f"<IndicatorBar (Owner={self.owner})>"
+
+    @property
+    def background_box(self):
+        """Returns the background box of the indicator bar."""
+        return self._background_box
+
+    @property
+    def full_box(self):
+        """Returns the full box of the indicator bar."""
+        return self._full_box
+
+    @property
+    def fullness(self):
+        """Returns the fullness of the bar."""
+        return self._fullness
+
+    @fullness.setter
+    def fullness(self, new_fullness):
+        """Sets the fullness of the bar."""
+        # Check if new_fullness if valid
+        if not (0.0 <= new_fullness <= 1.0):
+            raise ValueError(
+                f"Got {new_fullness}, but fullness must be between 0.0 and 1.0."
+            )
+
+        # Set the size of the bar
+        self._fullness = new_fullness
+        if new_fullness == 0.0:
+            # Set the full_box to not be visible since it is not full anymore
+            self.full_box.visible = False
+        else:
+            # Set the full_box to be visible incase it wasn't then update the bar
+            self.full_box.visible = True
+            self.full_box.width = self._box_width * new_fullness
+            self.full_box.left = self._center_x - (self._box_width // 2)
+
+    @property
+    def position(self):
+        """Returns the current position of the bar."""
+        return self._center_x, self._center_y
+
+    @position.setter
+    def position(self, new_position) -> None:
+        """Sets the new position of the bar."""
+        # Check if the position has changed. If so, change the bar's position
+        if new_position != self.position:
+            self._center_x, self._center_y = new_position
+            self.background_box.position = new_position
+            self.full_box.position = new_position
+
+            # Make sure full_box is to the left of the bar instead of the middle
+            self.full_box.left = self._center_x - (self._box_width // 2)
 
 class MyGame(arcade.Window):
     def __init__(self, width, height, title):
@@ -92,6 +183,7 @@ class MyGame(arcade.Window):
 
         self.player_list = None
         self.player_sprite = None
+        self.health_bar_list = None
 
         self.bullet_list = None
         self.enemy_list = None
@@ -108,8 +200,9 @@ class MyGame(arcade.Window):
         
 
     def setup(self):
+        self.health_bar_list = arcade.SpriteList()
         self.player_list = arcade.SpriteList()
-        self.player_sprite = Player()
+        self.player_sprite = Player(self.health_bar_list)
 
         self.bullet_list = arcade.SpriteList()
 
@@ -153,6 +246,7 @@ class MyGame(arcade.Window):
         self.bullet_list.draw()
         self.player_list.draw()
         self.enemy_list.draw()
+        self.health_bar_list.draw()
 
         screen_score = f"Score: {self.score}"
         arcade.draw_text(screen_score, 10, 20, arcade.color.YELLOW, 14)
@@ -161,6 +255,11 @@ class MyGame(arcade.Window):
         # update the sprite location
         self.player_list.update()
         self.bullet_list.update()
+
+        self.player_sprite.health_bar.position = (
+            self.player_sprite.center_x,
+            self.player_sprite.center_y + INDICATOR_BAR_OFFSET,
+        )
 
         for bullet in self.bullet_list:
             

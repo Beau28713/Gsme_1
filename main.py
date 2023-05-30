@@ -101,6 +101,9 @@ class MyGame(arcade.Window):
         self.up_pressed = False
         self.down_pressed = False
 
+        self.firing_sound = arcade.sound.load_sound(":resources:sounds/laser1.wav")
+        self.hit_enemy = arcade.sound.load_sound(":resources:sounds/phaseJump1.wav")
+
         arcade.set_background_color(arcade.color.AMAZON)
         
 
@@ -172,6 +175,7 @@ class MyGame(arcade.Window):
             # add one point to score
             for enemy in hit_list:
                 enemy.remove_from_sprite_lists()
+                arcade.play_sound(self.hit_enemy)
                 self.score += 1
 
             # if bullet goes off screen remove it from the sprite list
@@ -208,6 +212,8 @@ class MyGame(arcade.Window):
         # set how fast the bullet will travel
         bullet.change_x = math.cos(angle) * BULLET_SPEED
         bullet.change_y = math.sin(angle) * BULLET_SPEED
+
+        arcade.play_sound(self.firing_sound)
 
         self.bullet_list.append(bullet)
 

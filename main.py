@@ -18,7 +18,8 @@ TEXTURE_LEFT = 0
 TEXTURE_RIGHT = 1
 
 COIN_COUNT = 10
-PLAYER_HEALTH = 10
+PLAYER_HEALTH = 5
+BULLET_DAMAGE = 1
 INDICATOR_BAR_OFFSET = 32
 
 class Enemy(arcade.Sprite):
@@ -193,8 +194,12 @@ class MyGame(arcade.Window):
         self.up_pressed = False
         self.down_pressed = False
 
+        self.game_over = False
+
         self.firing_sound = arcade.sound.load_sound(":resources:sounds/laser1.wav")
         self.hit_enemy = arcade.sound.load_sound(":resources:sounds/phaseJump1.wav")
+
+        
 
         arcade.set_background_color(arcade.color.AMAZON)
         
@@ -251,37 +256,52 @@ class MyGame(arcade.Window):
         screen_score = f"Score: {self.score}"
         arcade.draw_text(screen_score, 10, 20, arcade.color.YELLOW, 14)
 
+        if self.game_over:
+            arcade.draw_text("Game Over", 250, 300, arcade.color.YELLOW, 40)
+
     def on_update(self, delta_time):
         # update the sprite location
         self.player_list.update()
         self.bullet_list.update()
 
+        # Make the bar follow the player
         self.player_sprite.health_bar.position = (
             self.player_sprite.center_x,
             self.player_sprite.center_y + INDICATOR_BAR_OFFSET,
         )
 
-        for bullet in self.bullet_list:
-            
-            # Check to see if any bullet hits the enemy 
-            hit_list = arcade.check_for_collision_with_list(bullet, self.enemy_list)
+        # Check to see if player is hit by enemy
+        if self.player_sprite.health <= 0:
+            self.game_over = True
+                    
+        else:
+            for enemy in self.enemy_list:
+                if arcade.check_for_collision(enemy, self.player_sprite):
+                    self.player_sprite.health -= BULLET_DAMAGE
+                    self.player_sprite.health_bar.fullness = (self.player_sprite.health / PLAYER_HEALTH)
+                    enemy.remove_from_sprite_lists()
 
-            # remove bullet from sprite list if it hits enemy
-            if len(hit_list) > 0:
-                bullet.remove_from_sprite_lists()
+            for bullet in self.bullet_list:
+                
+                # Check to see if any bullet hits the enemy 
+                hit_list = arcade.check_for_collision_with_list(bullet, self.enemy_list)
 
-            # if an enmy is in the hit list remove it from the sprite list
-            # add one point to score
-            for enemy in hit_list:
-                enemy.remove_from_sprite_lists()
-                arcade.play_sound(self.hit_enemy)
-                self.score += 1
+                # remove bullet from sprite list if it hits enemy
+                if len(hit_list) > 0:
+                    bullet.remove_from_sprite_lists()
 
-            # if bullet goes off screen remove it from the sprite list
-            if bullet.bottom > self.width or bullet.top < 0 or bullet.right < 0 or bullet.left > self.width:
-                bullet.remove_from_sprite_lists()
+                # if an enmy is in the hit list remove it from the sprite list
+                # add one point to score
+                for enemy in hit_list:
+                    enemy.remove_from_sprite_lists()
+                    arcade.play_sound(self.hit_enemy)
+                    self.score += 1
 
-        # for every enemy in enemy list callfollow player 
+                # if bullet goes off screen remove it from the sprite list
+                if bullet.bottom > self.width or bullet.top < 0 or bullet.right < 0 or bullet.left > self.width:
+                    bullet.remove_from_sprite_lists()
+
+        # for every enemy in enemy list call follow player 
         # and send it a player sprite object
         for enemy in self.enemy_list:
             enemy.follow_player(self.player_sprite)
